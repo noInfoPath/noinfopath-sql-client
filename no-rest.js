@@ -1,6 +1,6 @@
 var util = require("util"),
 	crudInterfaces = {
-		"mysql": "./no-mysql-crud"
+		"mysql": __dirname + "/no-mysql-crud"
 	},
 	conversionFunctionsIn = {
 		"bigint": function (i) {
