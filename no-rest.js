@@ -300,7 +300,7 @@ function _delete(crud, schema, req) {
 
 //CRUD Aliases
 function _create(crud, schema, data) {
-	
+
 	if (data._id) delete data._id;  //This is a mongodb thing.
 
 	if (data[schema.primaryKey]) delete data[schema.primaryKey];
@@ -367,7 +367,12 @@ function _wrapSchema(crud, schema) {
 		one: _one.bind(null, crud, schema),
 		update: _update.bind(null, crud, schema),
 		create: _create.bind(null, crud, schema),
-		destroy: _destroy.bind(null, crud, schema)
+		destroy: _destroy.bind(null, crud, schema),
+		get: _get.bind(null, crud, schema),
+		getOne: _getOne.bind(null, crud, schema),
+		putByPrimaryKey: _putByPrimaryKey.bind(null, crud, schema),
+		post: _post.bind(null, crud, schema),
+		delete: _delete.bind(null, crud, schema)
 	};
 }
 
