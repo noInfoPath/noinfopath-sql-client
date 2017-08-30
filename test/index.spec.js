@@ -274,4 +274,91 @@ describe("Testing noinfopath-sql-client E2E", function () {
 		});
 	});
 
+	describe("Testing misc. functions", function(){
+		it("should have a wrapSchema function", function(){
+			assert(sqlClient.wrapSchema);
+		});
+
+		describe("should have a wrapSchema should return a CRUD inteface specific to provided schema.", function(){
+			var wrapped = sqlClient.wrapSchema(testSchema);
+			it("should create a new record", function (done) {
+
+				wrapped.create(testData)
+					.then(function (r) {
+						testData = r;
+						assert.ok(r);
+						done();
+					})
+					.catch(function (e) {
+						console.error(e);
+						done(e);
+					});
+			});
+
+			it("should update existing record", function (done) {
+				testData.data += " " + (new Date()).toLocaleString();
+
+				wrapped.update(testData)
+					.then(function (r) {
+						testData = r;
+						assert.ok(r);
+						done();
+					})
+					.catch(function (e) {
+						console.error(e);
+						done(e);
+					});
+			});
+
+			it("should read all existing record", function (done) {
+				wrapped.read()
+					.then(function (r) {
+						assert(r.length > 0);
+						//console.log(r);
+						done();
+					})
+					.catch(function (e) {
+						console.error(e);
+						done(e);
+					});
+			});
+
+			it("should read the last record written", function (done) {
+				wrapped.one(testData.id)
+					.then(function (r) {
+						assert.ok(r);
+						//console.log(r);
+						done();
+					})
+					.catch(function (e) {
+						console.error(e);
+						done(e);
+					});
+			});
+
+			it("should delete the last record written using route parameter", function (done) {
+				var f = {
+					params: {
+						id: testData.id
+					}
+				};
+
+				wrapped.destroy(f)
+					.then(function (r) {
+						assert.ok(r);
+						//console.log(r);
+						done();
+					})
+					.catch(function (e) {
+						console.error(e);
+						done(e);
+					});
+			});
+
+			xit("TODO: should delete records using OData query", function () {
+
+			});
+
+		});
+	})
 });

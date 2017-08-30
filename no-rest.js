@@ -300,6 +300,7 @@ function _delete(crud, schema, req) {
 
 //CRUD Aliases
 function _create(crud, schema, data) {
+	
 	if (data._id) delete data._id;  //This is a mongodb thing.
 
 	if (data[schema.primaryKey]) delete data[schema.primaryKey];
@@ -360,6 +361,16 @@ function _destroy(crud, schema, filter) {
 	return crud.execute(schema, crud.operations.DELETE, null, filter);
 }
 
+function _wrapSchema(crud, schema) {
+	return {
+		read: _read.bind(null, crud, schema),
+		one: _one.bind(null, crud, schema),
+		update: _update.bind(null, crud, schema),
+		create: _create.bind(null, crud, schema),
+		destroy: _destroy.bind(null, crud, schema)
+	};
+}
+
 module.exports = function(crudType, sqlConnInfo) {
 	var crud = require(crudInterfaces[crudType])(sqlConnInfo);
 
@@ -381,7 +392,9 @@ module.exports = function(crudType, sqlConnInfo) {
 		destroy: _destroy.bind(null, crud),
 
 		//Testing interface
-		_crud: crud
+		_crud: crud,
+
+		wrapSchema: _wrapSchema.bind(null, crud)
 	};
 
 };
