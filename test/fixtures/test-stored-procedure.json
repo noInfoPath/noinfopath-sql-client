@@ -7,7 +7,7 @@
 	"nsPrefix": "app",
 	"entityType": "sp",
 	"useQueryParams": false,
-	"ops": {
+	"sp": {
 		"GET": {
 			"type": "sp",
 			"name": "sp_companies_within_range",

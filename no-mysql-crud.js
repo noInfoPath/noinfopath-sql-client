@@ -165,7 +165,7 @@ function _readStoredProcedure(collection, data, tmp) {
 				return tmp.query[param];
 			});
 
-			qstuff = qstuff.concat(paramValues);			
+			qstuff = qstuff.concat(paramValues);
 			sql = util.format(sqlFormat, collection, paramString);
 
 		} else {
@@ -307,7 +307,7 @@ function beginTransaction(schema, type, data, filter) {
 			break;
 		case CRUD_OPERATIONS.READSP:
 			tmp.query = filter || {};
-			tmp.paramNames = schema.ops.GET.params || {};
+			tmp.paramNames = schema.sp.GET.params || {};
 			break;
 		default:
 			if (typeof (filter) === "object") {
