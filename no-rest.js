@@ -337,6 +337,28 @@ function _read(crud, schema, filter) {
 		});
 }
 
+function _readSP(crud, schema, filter) {
+	return crud.execute(schema, crud.operations.READSP, null, filter)
+		.then(function(results){
+
+			if(results.value) {
+				results.value = results.value.map(function(datum){
+					return _transformDatum(schema, datum);
+				});
+			} else {
+				if(Array.isArray(results)) {
+					results = results.map(function(datum){
+						return _transformDatum(schema, datum);
+					});
+				} else {
+					return results;
+				}
+			}
+
+			return results;
+		});
+}
+
 function _one(crud, schema, filter) {
 	return _read(crud, schema, filter)
 		.then(function (results) {
@@ -364,6 +386,7 @@ function _destroy(crud, schema, filter) {
 function _wrapSchema(crud, schema) {
 	return {
 		read: _read.bind(null, crud, schema),
+		readSP: _readSP.bind(null, crud, schema),
 		one: _one.bind(null, crud, schema),
 		update: _update.bind(null, crud, schema),
 		create: _create.bind(null, crud, schema),
@@ -391,6 +414,7 @@ module.exports = function(crudType, sqlConnInfo) {
 
 		//CRUD Exports
 		read: _read.bind(null, crud),
+		readSP: _readSP.bind(null, crud),
 		one: _one.bind(null, crud),
 		update: _update.bind(null, crud),
 		create: _create.bind(null, crud),

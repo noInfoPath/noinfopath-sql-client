@@ -43,12 +43,14 @@
 var config = {
 		mysql: {}
 	},
+	util = require("util"),
 	mysql = require("mysql"),
 	mysqlp = require('promise-mysql'), //TODO: Convert to use promised mysql.
 	CRUD = {},
 	CRUD_OPERATIONS = {
 		"CREATE": "create",
 		"READ": "read",
+		"READSP": "readSP",
 		"READMETA": "readMeta",
 		"UPDATE": "update",
 		"DELETE": "delete",
@@ -106,7 +108,6 @@ function _readDocument(collection, data, filter) {
 		}
 
 		if (filter.orderby) {
-
 			sql = sql + " ORDER BY " + filter.orderby;
 		}
 
@@ -145,6 +146,58 @@ function _readDocument(collection, data, filter) {
 	});
 }
 CRUD[CRUD_OPERATIONS.READ] = _readDocument;
+
+function _readStoredProcedure(collection, data, tmp) {
+	return new Promise(function (resolve, reject) {
+		var connection = mysql.createConnection(config.mysql),
+			sqlFormat = "call %s(%s)",
+			sql,
+			qstuff = [];
+
+		if (tmp.paramNames) {
+			// sql = sql + "("; // open
+			// this was a forEach but I needed a good way to not have the trailing comma
+			var paramString = tmp.paramNames.map(function(param){
+				return "?";
+			}).join(",");
+
+			var paramValues = tmp.paramNames.map(function(param){
+				return tmp.query[param];
+			});
+
+			qstuff = qstuff.concat(paramValues);			
+			sql = util.format(sqlFormat, collection, paramString);
+
+		} else {
+			sql = util.format(sqlFormat, collection, "");
+		}
+
+		connection.connect();
+
+		connection.query(sql, qstuff, function (error, results, fields) {
+			connection.end();
+
+			if (error) {
+				reject(error);
+			} else {
+				// if (filter.getTotal) {
+				// 	var retval = {
+				// 		value: results
+				// 	};
+				// 	return _countDocuments(collection, data, queryParams)
+				// 		.then(function (total) {
+				// 			retval["odata.metadata"] = true;
+				// 			retval["odata.count"] = total;
+				// 			resolve(retval);
+				// 		});
+				// } else {
+					resolve(results);
+				// }
+			}
+		});
+	});
+}
+CRUD[CRUD_OPERATIONS.READSP] = _readStoredProcedure;
 
 function _insertDocument(collection, data, filter) {
 
@@ -244,31 +297,37 @@ function beginTransaction(schema, type, data, filter) {
 		select: "*"
 	};
 
-	if (CRUD_OPERATIONS.DELETE === type) {
-		if (filter.params && filter.params.id) {
-			tmp = [schema.entityName, schema.primaryKey, filter.params.id];
-		} else {
-			tmp = filter.odata;
-		}
-	} else {
-		if (typeof (filter) === "object") {
-			tmp = filter;
-		} else {
-			if (filter) {
-				tmp.query = {
-					parameters: []
-				};
-				tmp.query.where = "`" + schema.primaryKey + "` = ?";
-				tmp.query.parameters.push(Number.isNaN(Number(filter)) ? filter : Number(filter));
-
+	switch(type) {
+		case CRUD_OPERATIONS.DELETE:
+			if (filter.params && filter.params.id) {
+				tmp = [schema.entityName, schema.primaryKey, filter.params.id];
 			} else {
-				if(data) {
-					tmp = {};
-					tmp[schema.primaryKey] = data[schema.primaryKey];
+				tmp = filter.odata;
+			}
+			break;
+		case CRUD_OPERATIONS.READSP:
+			tmp.query = filter || {};
+			tmp.paramNames = schema.ops.GET.params || {};
+			break;
+		default:
+			if (typeof (filter) === "object") {
+				tmp = filter;
+			} else {
+				if (filter) {
+					tmp.query = {
+						parameters: []
+					};
+					tmp.query.where = "`" + schema.primaryKey + "` = ?";
+					tmp.query.parameters.push(Number.isNaN(Number(filter)) ? filter : Number(filter));
+
+				} else {
+					if(data) {
+						tmp = {};
+						tmp[schema.primaryKey] = data[schema.primaryKey];
+					}
 				}
 			}
-		}
-	}
+	};
 
 	return CRUD[type](schema.entityName, data, tmp)
 		.then(function (results) {

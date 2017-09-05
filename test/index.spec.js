@@ -2,6 +2,7 @@ var assert = require("assert"),
 	sqlConnInfo = require("./fixtures/sql-conn-info"),
 	sqlClientInit = require("../index"),
 	testSchema = require("./fixtures/test-schema"),
+	testStoredProcedure = require("./fixtures/test-stored-procedure"),
 	testData = require("./fixtures/test-data"),
 	sqlClient = sqlClientInit("mysql", sqlConnInfo);
 
@@ -175,6 +176,23 @@ describe("Testing noinfopath-sql-client E2E", function () {
 
 		});
 
+		it("should call a stored procedure", function(done){
+			var f = {
+				latIn: 39.9835,
+				lngIn: -75.1782,
+				withinRange: 50,
+				preferred: false
+			}
+			sqlClient.readSP(testStoredProcedure, f)
+				.then(function(r){
+					assert(r.length > 0);
+					done();
+				})
+				.catch(function(e){
+					console.error(e);
+					done(e);
+				})
+		});
 	});
 
 	describe("Testing route driven CRUD operations", function(){

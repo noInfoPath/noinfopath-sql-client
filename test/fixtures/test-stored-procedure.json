@@ -1,0 +1,17 @@
+{
+	"storageType": "mysql",
+	"odataParser": "odata-v4-mysql",
+	"uri": "/app/testsp",
+	"entityName": "sp_companies_within_range",
+	"primaryKey": "id",
+	"nsPrefix": "app",
+	"entityType": "sp",
+	"useQueryParams": false,
+	"ops": {
+		"GET": {
+			"type": "sp",
+			"name": "sp_companies_within_range",
+			"params": ["latIn", "lngIn", "withinRange", "preferred"]
+		}
+	}
+}
