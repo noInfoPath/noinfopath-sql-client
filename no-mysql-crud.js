@@ -53,6 +53,7 @@ var config = {
 		"READSP": "readSP",
 		"READMETA": "readMeta",
 		"UPDATE": "update",
+		"WRITESP": "writeSP",
 		"DELETE": "delete",
 		"COUNT": "count"
 	};
@@ -155,8 +156,6 @@ function _readStoredProcedure(collection, data, tmp) {
 			qstuff = [];
 
 		if (tmp.paramNames) {
-			// sql = sql + "("; // open
-			// this was a forEach but I needed a good way to not have the trailing comma
 			var paramString = tmp.paramNames.map(function(param){
 				return "?";
 			}).join(",");
@@ -180,19 +179,7 @@ function _readStoredProcedure(collection, data, tmp) {
 			if (error) {
 				reject(error);
 			} else {
-				// if (filter.getTotal) {
-				// 	var retval = {
-				// 		value: results
-				// 	};
-				// 	return _countDocuments(collection, data, queryParams)
-				// 		.then(function (total) {
-				// 			retval["odata.metadata"] = true;
-				// 			retval["odata.count"] = total;
-				// 			resolve(retval);
-				// 		});
-				// } else {
-					resolve(results);
-				// }
+				resolve(results);
 			}
 		});
 	});
@@ -226,6 +213,35 @@ function _insertDocument(collection, data, filter) {
 	});
 }
 CRUD[CRUD_OPERATIONS.CREATE] = _insertDocument;
+
+function _writeStoredProcedure(collection, data, filter) {
+	return new Promise(function (resolve, reject) {
+		var connection = mysql.createConnection(config.mysql),
+			sqlFormat = "call %s(%s)",
+			sql,
+			qstuff = [];
+
+		if(data) {
+			sql = util.format(sqlFormat, collection, "?");
+			qstuff.push(JSON.stringify(data));
+		} else {
+			sql = util.format(sqlFormat, collection, "");
+		}
+
+		connection.connect();
+
+		connection.query(sql, qstuff, function (error, results, fields) {
+			connection.end();
+
+			if (error) {
+				reject(error);
+			} else {
+				resolve(results);
+			}
+		});
+	});
+}
+CRUD[CRUD_OPERATIONS.WRITESP] = _writeStoredProcedure;
 
 function _updateDocument(collection, data, filter) {
 
@@ -308,6 +324,8 @@ function beginTransaction(schema, type, data, filter) {
 		case CRUD_OPERATIONS.READSP:
 			tmp.query = filter || {};
 			tmp.paramNames = schema.sp.GET.params || {};
+			break;
+		case CRUD_OPERATIONS.WRITESP:
 			break;
 		default:
 			if (typeof (filter) === "object") {

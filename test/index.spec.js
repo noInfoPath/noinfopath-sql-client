@@ -3,12 +3,13 @@ var assert = require("assert"),
 	sqlClientInit = require("../index"),
 	testSchema = require("./fixtures/test-schema"),
 	testStoredProcedure = require("./fixtures/test-stored-procedure"),
+	testPerson = require("./fixtures/test-person"),
 	testData = require("./fixtures/test-data"),
 	sqlClient = sqlClientInit("mysql", sqlConnInfo);
 
 
 describe("Testing noinfopath-sql-client E2E", function () {
-	describe("Testing initialization", function () {
+	xdescribe("Testing initialization", function () {
 
 		it("should have loaded in the initialization function.", function () {
 			assert(typeof (sqlClientInit) === "function");
@@ -27,7 +28,7 @@ describe("Testing noinfopath-sql-client E2E", function () {
 		});
 	});
 
-	describe("Testing direct mysql crud actions", function () {
+	xdescribe("Testing direct mysql crud actions", function () {
 		var crud = sqlClient._crud;
 
 		it("should create a new record", function (done) {
@@ -97,7 +98,7 @@ describe("Testing noinfopath-sql-client E2E", function () {
 
 	});
 
-	describe("Testing NoRest driven CRUD operations", function(){
+	xdescribe("Testing NoRest driven CRUD operations", function(){
 		it("should create a new record", function (done) {
 
 			sqlClient.create(testSchema, testData)
@@ -176,13 +177,14 @@ describe("Testing noinfopath-sql-client E2E", function () {
 
 		});
 
-		it("should call a stored procedure", function(done){
+		it("should read from a stored procedure", function(done){
 			var f = {
 				latIn: 39.9835,
 				lngIn: -75.1782,
 				withinRange: 50,
 				preferred: false
-			}
+			};
+
 			sqlClient.readSP(testStoredProcedure, f)
 				.then(function(r){
 					assert(r.length > 0);
@@ -193,9 +195,32 @@ describe("Testing noinfopath-sql-client E2E", function () {
 					done(e);
 				})
 		});
+
+
 	});
 
-	describe("Testing route driven CRUD operations", function(){
+	describe("Testing write sp", function(){
+		it("should write using a stored procedure", function(done){
+			var f = {
+				latIn: 39.9835,
+				lngIn: -75.1782,
+				withinRange: 50,
+				preferred: false
+			};
+
+			sqlClient.writeSP(testPerson.route, testPerson.data)
+				.then(function(r){
+					assert(true);
+					done();
+				})
+				.catch(function(e){
+					console.error(e);
+					done(e);
+				})
+		});
+	})
+
+	xdescribe("Testing route driven CRUD operations", function(){
 		it("should create a new record", function (done) {
 			var req = {
 				body: testData
@@ -292,7 +317,7 @@ describe("Testing noinfopath-sql-client E2E", function () {
 		});
 	});
 
-	describe("Testing misc. functions", function(){
+	xdescribe("Testing misc. functions", function(){
 		it("should have a wrapSchema function", function(){
 			assert(sqlClient.wrapSchema);
 		});

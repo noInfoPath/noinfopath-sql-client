@@ -359,6 +359,13 @@ function _readSP(crud, schema, filter) {
 		});
 }
 
+function _writeSP(crud, schema, data, filter) {
+	return crud.execute(schema, crud.operations.WRITESP, data, filter)
+		.then(function(results){
+			return results;
+		});
+}
+
 function _one(crud, schema, filter) {
 	return _read(crud, schema, filter)
 		.then(function (results) {
@@ -373,7 +380,6 @@ function _update(crud, schema, data, filter) {
 
 	return crud.execute(schema, crud.operations.UPDATE, data, filter)
 		.then(function(result){
-			//console.log(result);
 			data[schema.primaryKey] = pk;
 			return _transformDatum(schema, data);
 		});
@@ -390,6 +396,7 @@ function _wrapSchema(crud, schema) {
 		one: _one.bind(null, crud, schema),
 		update: _update.bind(null, crud, schema),
 		create: _create.bind(null, crud, schema),
+		writeSP: _writeSP.bind(null, crud, schema),
 		destroy: _destroy.bind(null, crud, schema),
 		get: _get.bind(null, crud, schema),
 		getOne: _getOne.bind(null, crud, schema),
@@ -418,6 +425,7 @@ module.exports = function(crudType, sqlConnInfo) {
 		one: _one.bind(null, crud),
 		update: _update.bind(null, crud),
 		create: _create.bind(null, crud),
+		writeSP: _writeSP.bind(null, crud),
 		destroy: _destroy.bind(null, crud),
 
 		//Testing interface
