@@ -1,0 +1,29 @@
+{
+	"route": {
+		"storageType": "mysql",
+		"odataParser": "odata-v4-mysql",
+		"uri": "/app/testsp",
+		"entityName": "sp_sop_get_company",
+		"primaryKey": "id",
+		"nsPrefix": "app",
+		"entityType": "sp",
+		"useQueryParams": false,
+		"sp": {
+			"GET": {
+				"type": "sp",
+				"name": "sp_sop_get_company",
+				"params": ["datum"]
+			}
+		}
+	},
+	"readIDData": {
+		"datum": {
+			"id": 1
+		}
+	},
+	"readEmailData": {
+		"datum": {
+			"email": "alaskacourtservices@acalaska.net"
+		}
+	}
+}

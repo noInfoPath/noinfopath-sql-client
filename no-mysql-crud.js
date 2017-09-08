@@ -126,7 +126,6 @@ function _readDocument(collection, data, filter) {
 			if (error) {
 				reject(error);
 			} else {
-
 				if (filter.getTotal) {
 					var retval = {
 						value: results
@@ -141,9 +140,7 @@ function _readDocument(collection, data, filter) {
 					resolve(results);
 				}
 			}
-
 		});
-
 	});
 }
 CRUD[CRUD_OPERATIONS.READ] = _readDocument;
@@ -161,7 +158,11 @@ function _readStoredProcedure(collection, data, tmp) {
 			}).join(",");
 
 			var paramValues = tmp.paramNames.map(function(param){
-				return tmp.query[param];
+				if(typeof tmp.query[param] === "object") {
+					return JSON.stringify(tmp.query[param]);
+				} else {
+					return tmp.query[param];
+				}
 			});
 
 			qstuff = qstuff.concat(paramValues);
@@ -171,6 +172,9 @@ function _readStoredProcedure(collection, data, tmp) {
 			sql = util.format(sqlFormat, collection, "");
 		}
 
+		// console.log(tmp.paramNames);
+		// console.log(tmp);
+
 		connection.connect();
 
 		connection.query(sql, qstuff, function (error, results, fields) {
@@ -179,7 +183,8 @@ function _readStoredProcedure(collection, data, tmp) {
 			if (error) {
 				reject(error);
 			} else {
-				resolve(results);
+				// Stored Procedures return an array of two objects, first is the array of values which is what we are looking for.
+				resolve(results[0]);
 			}
 		});
 	});
