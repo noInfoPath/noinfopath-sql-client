@@ -146,6 +146,7 @@ function _readDocument(collection, data, filter) {
 CRUD[CRUD_OPERATIONS.READ] = _readDocument;
 
 function _readStoredProcedure(collection, data, tmp) {
+	console.log(tmp);
 	return new Promise(function (resolve, reject) {
 		var connection = mysql.createConnection(config.mysql),
 			sqlFormat = "call %s(%s)",
@@ -172,9 +173,6 @@ function _readStoredProcedure(collection, data, tmp) {
 			sql = util.format(sqlFormat, collection, "");
 		}
 
-		// console.log(tmp.paramNames);
-		// console.log(tmp);
-
 		connection.connect();
 
 		connection.query(sql, qstuff, function (error, results, fields) {
@@ -192,7 +190,6 @@ function _readStoredProcedure(collection, data, tmp) {
 CRUD[CRUD_OPERATIONS.READSP] = _readStoredProcedure;
 
 function _insertDocument(collection, data, filter) {
-
 	return new Promise(function (resolve, reject) {
 		var connection = mysql.createConnection(config.mysql);
 
@@ -213,8 +210,6 @@ function _insertDocument(collection, data, filter) {
 				});
 			}
 		});
-
-
 	});
 }
 CRUD[CRUD_OPERATIONS.CREATE] = _insertDocument;
@@ -249,7 +244,6 @@ function _writeStoredProcedure(collection, data, filter) {
 CRUD[CRUD_OPERATIONS.WRITESP] = _writeStoredProcedure;
 
 function _updateDocument(collection, data, filter) {
-
 	return new Promise(function (resolve, reject) {
 		var connection = mysql.createConnection(config.mysql),
 			key = Object.keys(filter)[0],
