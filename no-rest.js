@@ -267,11 +267,11 @@ function _resolveBodyData(req) {
 
 //HTTP Aliases
 function _get(crud, schema, req) {
-	return _read(crud, schema, req.odata);
+	return _read(crud, schema, req);
 }
 
 function _getOne(crud, schema, req) {
-	return _one(crud, schema,  req.params.id); //TODO: make this support ODATA filter also.
+	return _one(crud, schema,  req); //TODO: make this support ODATA filter also.
 }
 
 function _putByPrimaryKey(crud, schema, req) {
@@ -300,7 +300,6 @@ function _delete(crud, schema, req) {
 
 //CRUD Aliases
 function _create(crud, schema, data) {
-
 	if (data._id) delete data._id;  //This is a mongodb thing.
 
 	if (data[schema.primaryKey]) delete data[schema.primaryKey];
@@ -337,23 +336,29 @@ function _read(crud, schema, filter) {
 		});
 }
 
-function _readSP(crud, schema, filter) {
-	return crud.execute(schema, crud.operations.READSP, null, filter)
+function _execSP(crud, schema, payload) {
+	return crud.execute(schema, crud.operations.EXECSP, null, payload)
 		.then(function(results){
+			results = results.map(function(datum){
+				return _transformDatum(schema, datum);
+			});
 
-			if(results.value) {
-				results.value = results.value.map(function(datum){
-					return _transformDatum(schema, datum);
-				});
+			if(schema.activeUri.returnOne) {
+				return results[0]; //Always returns the first result item or undefined.
 			} else {
-				if(Array.isArray(results)) {
-					results = results.map(function(datum){
-						return _transformDatum(schema, datum);
-					});
-				} else {
-					return results;
-				}
+				return results;
 			}
+			// if(results.value) {
+			// 	results.value = results.value.map(function(datum){
+			// 		return _transformDatum(schema, datum);
+			// 	});
+			// } else {
+			// 	if(Array.isArray(results)) {
+			//
+			// 	} else {
+			// 		return results;
+			// 	}
+			// }
 
 			return results;
 		});
@@ -386,7 +391,7 @@ function _destroy(crud, schema, filter) {
 function _wrapSchema(crud, schema) {
 	return {
 		read: _read.bind(null, crud, schema),
-		readSP: _readSP.bind(null, crud, schema),
+		execSP: _execSP.bind(null, crud, schema),
 		one: _one.bind(null, crud, schema),
 		update: _update.bind(null, crud, schema),
 		create: _create.bind(null, crud, schema),
@@ -414,7 +419,7 @@ module.exports = function(crudType, sqlConnInfo) {
 
 		//CRUD Exports
 		read: _read.bind(null, crud),
-		readSP: _readSP.bind(null, crud),
+		execSP: _execSP.bind(null, crud),
 		one: _one.bind(null, crud),
 		update: _update.bind(null, crud),
 		create: _create.bind(null, crud),

@@ -97,15 +97,19 @@ function _readDocument(collection, data, filter) {
 
 		var connection = mysql.createConnection(config.mysql),
 			sql = "select ?? from ??",
-			qstuff = [filter.select, collection];
+			qstuff = [filter.select || "*", collection];
 
 		//console.log("_readDocument", connection.state);
+		if(filter) {
+			if (filter.query) {
+				//console.log(filter.query.parameters);
+				sql = sql + " WHERE " + filter.query.where.replace(/\$\d+/gi, "?");
+				qstuff = qstuff.concat(filter.query.parameters);
+			} else {
 
-		if (filter && filter.query) {
-			//console.log(filter.query.parameters);
-			sql = sql + " WHERE " + filter.query.where.replace(/\$\d+/gi, "?");
-			qstuff = qstuff.concat(filter.query.parameters);
+			}
 		}
+
 
 		if (filter.orderby) {
 			sql = sql + " ORDER BY " + filter.orderby;
@@ -150,27 +154,34 @@ CRUD[CRUD_OPERATIONS.READ] = _readDocument;
 function _readStoredProcedure(collection, data, tmp) {
 	return new Promise(function (resolve, reject) {
 		var connection = mysql.createConnection(config.mysql),
-			sqlFormat = "call %s(%s)",
+			sqlFormat = "call %s('%s')",
 			sql,
-			qstuff = [];
+			qstuff = [], params = {};
 
-		if (tmp.paramNames) {
-			// sql = sql + "("; // open
-			// this was a forEach but I needed a good way to not have the trailing comma
-			var paramString = tmp.paramNames.map(function(param){
-				return "?";
-			}).join(",");
+		// if (tmp.paramNames) {
+		// 	// sql = sql + "("; // open
+		// 	// this was a forEach but I needed a good way to not have the trailing comma
+		// 	var paramString = tmp.paramNames.map(function(param){
+		// 		return "?";
+		// 	}).join(",");
+		//
+		// 	var paramValues = tmp.paramNames.map(function(param){
+		// 		return tmp.query[param];
+		// 	});
+		//
+		// 	qstuff = qstuff.concat(paramValues);
+		// 	sql = util.format(sqlFormat, collection, paramString);
+		//
+		// } else {
 
-			var paramValues = tmp.paramNames.map(function(param){
-				return tmp.query[param];
-			});
+		for(var i=0; i < tmp.query.parameters.length; i+=2) {
+			var n = tmp.query.parameters[i],
+				v = tmp.query.parameters[i+1];
 
-			qstuff = qstuff.concat(paramValues);
-			sql = util.format(sqlFormat, collection, paramString);
-
-		} else {
-			sql = util.format(sqlFormat, collection, "");
+			params[n] = v;
 		}
+		sql = util.format(sqlFormat, collection, JSON.stringify(params));
+		//}
 
 		connection.connect();
 
@@ -191,7 +202,7 @@ function _readStoredProcedure(collection, data, tmp) {
 				// 			resolve(retval);
 				// 		});
 				// } else {
-					resolve(results);
+					resolve(results.length > 0 ? results[0] : []);
 				// }
 			}
 		});
@@ -292,10 +303,53 @@ function _deleteDocument(collection, data, filter) {
 }
 CRUD[CRUD_OPERATIONS.DELETE] = _deleteDocument;
 
+/*
+*	_resolveFilter
+*/
+function _resolveFilter(req) {
+	function __isReqObject(req) { return !!req.url; }
+	function __hasQueryString(req) { return __isReqObject(req) && (Object.keys(req.query || {}).length > 0); }
+	function __hasRouteParams(req) { return __isReqObject(req) && (Object.keys(req.params || {}).length > 0); }
+	function __hasODATA(req) { return __isReqObject(req) && (Object.keys(req.odata || {}).length > 0); }
+
+	if(!req) {
+		return {type: "none", filter: null};
+	} else if(__hasODATA(req)) {
+		console.log(req.odata);
+		return {type: "odata", filter: req.odata};
+	} else if(__hasQueryString(req)){
+		return {type: "queryString", filter: req.query};
+	} else if(__hasRouteParams(req)) {
+		return {type: "routeParams", filter: req.params};
+	} else {
+		return req;
+	}
+
+}
+
+function _makeQueryPayload(filter) {
+	var q = {
+			"select": "*",
+			"where": "",
+			"orderby": "",
+			"parameters": []
+		}, tWhere = [];
+
+	Object.keys(filter).forEach(function(k){
+		tWhere.push("?? = ?");
+		q.parameters.push(k);
+		q.parameters.push(filter[k]);
+
+	});
+
+	q.where = tWhere.join(" and ");
+
+	return {query: q};
+}
+
 function beginTransaction(schema, type, data, filter) {
-	var tmp = {
-		select: "*"
-	};
+	var resolvedFilter = _resolveFilter(filter),
+		tmp = {select: "*"}, entityName;
 
 	switch(type) {
 		case CRUD_OPERATIONS.DELETE:
@@ -305,31 +359,56 @@ function beginTransaction(schema, type, data, filter) {
 				tmp = filter.odata;
 			}
 			break;
-		case CRUD_OPERATIONS.READSP:
-			tmp.query = filter || {};
-			tmp.paramNames = schema.sp.GET.params || {};
-			break;
+		// case CRUD_OPERATIONS.READSP:
+		// 	tmp.query = filter || {};
+		// 	tmp.paramNames = schema.sp.GET.params || {};
+		// 	break;
 		default:
-			if (typeof (filter) === "object") {
-				tmp = filter;
-			} else {
-				if (filter) {
-					tmp.query = {
-						parameters: []
-					};
-					tmp.query.where = "`" + schema.primaryKey + "` = ?";
-					tmp.query.parameters.push(Number.isNaN(Number(filter)) ? filter : Number(filter));
-
-				} else {
-					if(data) {
-						tmp = {};
-						tmp[schema.primaryKey] = data[schema.primaryKey];
-					}
-				}
+			switch(resolvedFilter.type) {
+				case "odata":
+					tmp = Object.assign(resolvedFilter.filter);
+					//if(tmp && !tmp.select) tmp.select = "*";
+					console.log(tmp, resolvedFilter);
+					break;
+				case "routeParams":
+				case "queryString":
+					tmp = _makeQueryPayload(resolvedFilter.filter);
+					break;
+				default:
+					// if(resolvedFilter) {
+					// 	tmp = resolvedFilter.filter;
+					// }
+					break;
 			}
+
+
+
+			// if (typeof (filter) === "object") {
+			// 	tmp = filter;
+			// } else {
+			// 	if (filter) {
+			// 		tmp.query = {
+			// 			parameters: []
+			// 		};
+			// 		tmp.query.where = "`" + schema.primaryKey + "` = ?";
+			// 		tmp.query.parameters.push(Number.isNaN(Number(filter)) ? filter : Number(filter));
+			//
+			// 	} else {
+			// 		if(data) {
+			// 			tmp = {};
+			// 			tmp[schema.primaryKey] = data[schema.primaryKey];
+			// 		}
+			// 	}
+			// }
 	};
 
-	return CRUD[type](schema.entityName, data, tmp)
+	if(schema.activeUri && schema.activeUri.type === "sp") {
+		entityName = schema.activeUri.name;
+	} else {
+		entityName = schema.entityName;
+	}
+
+	return CRUD[type](entityName, data, tmp)
 		.then(function (results) {
 			return results;
 		})
