@@ -50,10 +50,10 @@ var config = {
 	CRUD_OPERATIONS = {
 		"CREATE": "create",
 		"READ": "read",
-		"READSP": "readSP",
+		"EXECSP": "execSP",
 		"READMETA": "readMeta",
 		"UPDATE": "update",
-		"WRITESP": "writeSP",
+		//"WRITESP": "writeSP",
 		"DELETE": "delete",
 		"COUNT": "count"
 	};
@@ -207,7 +207,7 @@ function _readStoredProcedure(collection, data, tmp) {
 		});
 	});
 }
-CRUD[CRUD_OPERATIONS.READSP] = _readStoredProcedure;
+CRUD[CRUD_OPERATIONS.EXECSP] = _readStoredProcedure;
 
 function _insertDocument(collection, data, filter) {
 	return new Promise(function (resolve, reject) {
@@ -434,6 +434,7 @@ function beginTransaction(schema, type, data, filter) {
 		entityName = schema.entityName;
 	}
 
+console.log(type);
 	return CRUD[type](entityName, data, tmp)
 		.then(function (results) {
 			return results;
