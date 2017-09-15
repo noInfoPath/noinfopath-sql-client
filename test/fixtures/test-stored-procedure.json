@@ -10,7 +10,7 @@
 	"sp": {
 		"GET": {
 			"type": "sp",
-			"name": "sp_companies_within_range",
+			"name": "sp_sop_person_address",
 			"params": ["latIn", "lngIn", "withinRange", "preferred"]
 		}
 	}

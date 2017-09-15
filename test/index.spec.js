@@ -3,12 +3,16 @@ var assert = require("assert"),
 	sqlClientInit = require("../index"),
 	testSchema = require("./fixtures/test-schema"),
 	testStoredProcedure = require("./fixtures/test-stored-procedure"),
+	testReadSP = require("./fixtures/test-read-sp"),
+	testWriteSP = require("./fixtures/test-write-sp"),
+	testPerson = require("./fixtures/test-person"),
+	testGetCompanySP = require("./fixtures/test-get-company-sp"),
 	testData = require("./fixtures/test-data"),
 	sqlClient = sqlClientInit("mysql", sqlConnInfo);
 
 
 describe("Testing noinfopath-sql-client E2E", function () {
-	describe("Testing initialization", function () {
+	xdescribe("Testing initialization", function () {
 
 		it("should have loaded in the initialization function.", function () {
 			assert(typeof (sqlClientInit) === "function");
@@ -27,7 +31,7 @@ describe("Testing noinfopath-sql-client E2E", function () {
 		});
 	});
 
-	describe("Testing direct mysql crud actions", function () {
+	xdescribe("Testing direct mysql crud actions", function () {
 		var crud = sqlClient._crud;
 
 		it("should create a new record", function (done) {
@@ -98,7 +102,7 @@ describe("Testing noinfopath-sql-client E2E", function () {
 	});
 
 	describe("Testing NoRest driven CRUD operations", function(){
-		it("should create a new record", function (done) {
+		xit("should create a new record", function (done) {
 
 			sqlClient.create(testSchema, testData)
 				.then(function (r) {
@@ -112,7 +116,7 @@ describe("Testing noinfopath-sql-client E2E", function () {
 				});
 		});
 
-		it("should update existing record", function (done) {
+		xit("should update existing record", function (done) {
 			testData.data += " " + (new Date()).toLocaleString();
 
 			sqlClient.update(testSchema, testData)
@@ -127,7 +131,7 @@ describe("Testing noinfopath-sql-client E2E", function () {
 				});
 		});
 
-		it("should read all existing record", function (done) {
+		xit("should read all existing record", function (done) {
 			sqlClient.read(testSchema)
 				.then(function (r) {
 					assert(r.length > 0);
@@ -140,7 +144,7 @@ describe("Testing noinfopath-sql-client E2E", function () {
 				});
 		});
 
-		it("should read the last record written", function (done) {
+		xit("should read the last record written", function (done) {
 			sqlClient.one(testSchema, testData.id)
 				.then(function (r) {
 					assert.ok(r);
@@ -153,7 +157,7 @@ describe("Testing noinfopath-sql-client E2E", function () {
 				});
 		});
 
-		it("should delete the last record written using route parameter", function (done) {
+		xit("should delete the last record written using route parameter", function (done) {
 			var f = {
 				params: {
 					id: testData.id
@@ -176,16 +180,13 @@ describe("Testing noinfopath-sql-client E2E", function () {
 
 		});
 
-		it("should call a stored procedure", function(done){
-			var f = {
-				latIn: 39.9835,
-				lngIn: -75.1782,
-				withinRange: 50,
-				preferred: false
-			}
-			sqlClient.readSP(testStoredProcedure, f)
+	});
+
+	describe("Testing sps", function(){
+		xit("should save to the test table using a stored procedure", function(done){
+			sqlClient.writeSP(testWriteSP.route, testWriteSP.data)
 				.then(function(r){
-					assert(r.length > 0);
+					assert(true);
 					done();
 				})
 				.catch(function(e){
@@ -193,9 +194,59 @@ describe("Testing noinfopath-sql-client E2E", function () {
 					done(e);
 				})
 		});
-	});
 
-	describe("Testing route driven CRUD operations", function(){
+		xit("should read from the test table using a stored procedure", function(done){
+			sqlClient.readSP(testReadSP.route, testReadSP.data)
+				.then(function(r){
+					assert(r.length > 0);
+					done();
+				})
+				.catch(function(e){
+					console.error(e);
+					done(e);
+				});
+		});
+
+		xit("sp_sop_person_address should save to all tables", function(done){
+			sqlClient.writeSP(testPerson.route, testPerson.data)
+				.then(function(r){
+					assert(true);
+					done();
+				})
+				.catch(function(e){
+					console.error(e);
+					done(e);
+				});
+		});
+
+		xit("sp_sop_get_company should get a record based on an id", function(done){
+			sqlClient.readSP(testGetCompanySP.route, testGetCompanySP.readIDData)
+				.then(function(r){
+					console.log(r[0]);
+					assert(r.length > 0);
+					done();
+				})
+				.catch(function(e){
+					console.error(e);
+					done(e);
+				});
+		});
+
+		it("sp_sop_get_company should get a record based on an email", function(done){
+			sqlClient.readSP(testGetCompanySP.route, testGetCompanySP.readEmailData)
+				.then(function(r){
+					console.log(r[0]);
+					assert(r.length > 0);
+					done();
+				})
+				.catch(function(e){
+					console.error(e);
+					done(e);
+				});
+		});
+	})
+
+	xdescribe("Testing route driven CRUD operations", function(){
 		it("should create a new record", function (done) {
 			var req = {
 				body: testData
@@ -292,7 +343,7 @@ describe("Testing noinfopath-sql-client E2E", function () {
 		});
 	});
 
-	describe("Testing misc. functions", function(){
+	xdescribe("Testing misc. functions", function(){
 		it("should have a wrapSchema function", function(){
 			assert(sqlClient.wrapSchema);
 		});

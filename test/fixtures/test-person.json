@@ -1,0 +1,40 @@
+{
+	"route": {
+		"storageType": "mysql",
+		"odataParser": "odata-v4-mysql",
+		"uri": "/app/testsp",
+		"entityName": "sp_sop_person_address",
+		"primaryKey": "id",
+		"nsPrefix": "app",
+		"entityType": "sp",
+		"useQueryParams": false,
+		"sp": {
+			"POST": {
+				"type": "sp",
+				"name": "sp_sop_person_address"
+			}
+		}
+	},
+	"data": {
+		"address": {
+			"name1": "Adarian Eastman",
+			"name2": null,
+			"address1": "404 Norristown Road",
+			"address2": null,
+			"city": "Horsham",
+			"state": "PA",
+			"zip": "19044",
+			"lat": 40.18872169999999,
+			"lng": -75.1482221,
+			"county": "Montgomery County",
+			"sop_request_id": 3067,
+			"sop_case_id": 356,
+			"sop_persona_type_id": 3
+		},
+		"documents": [],
+		"CreatedBy": 82,
+		"DateCreated": "2017-09-07T15:36:26.113",
+		"ModifiedDate": "2017-09-07T15:36:26.114",
+		"ModifiedBy": 82
+	}
+}

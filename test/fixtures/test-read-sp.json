@@ -1,0 +1,22 @@
+{
+	"route": {
+		"storageType": "mysql",
+		"odataParser": "odata-v4-mysql",
+		"uri": "/app/testsp",
+		"entityName": "sp_test_read",
+		"primaryKey": "id",
+		"nsPrefix": "app",
+		"entityType": "sp",
+		"useQueryParams": false,
+		"sp": {
+			"GET": {
+				"type": "sp",
+				"name": "sp_test_read",
+				"params": ["datum"]
+			}
+		}
+	},
+	"data": {
+		"datum": "Test Record"
+	}
+}

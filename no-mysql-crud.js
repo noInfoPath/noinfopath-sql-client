@@ -53,6 +53,7 @@ var config = {
 		"READSP": "readSP",
 		"READMETA": "readMeta",
 		"UPDATE": "update",
+		"WRITESP": "writeSP",
 		"DELETE": "delete",
 		"COUNT": "count"
 	};
@@ -129,7 +130,6 @@ function _readDocument(collection, data, filter) {
 			if (error) {
 				reject(error);
 			} else {
-
 				if (filter.getTotal) {
 					var retval = {
 						value: results
@@ -144,14 +144,13 @@ function _readDocument(collection, data, filter) {
 					resolve(results);
 				}
 			}
-
 		});
-
 	});
 }
 CRUD[CRUD_OPERATIONS.READ] = _readDocument;
 
 function _readStoredProcedure(collection, data, tmp) {
+	console.log(tmp);
 	return new Promise(function (resolve, reject) {
 		var connection = mysql.createConnection(config.mysql),
 			sqlFormat = "call %s('%s')",
@@ -211,7 +210,6 @@ function _readStoredProcedure(collection, data, tmp) {
 CRUD[CRUD_OPERATIONS.READSP] = _readStoredProcedure;
 
 function _insertDocument(collection, data, filter) {
-
 	return new Promise(function (resolve, reject) {
 		var connection = mysql.createConnection(config.mysql);
 
@@ -232,14 +230,40 @@ function _insertDocument(collection, data, filter) {
 				});
 			}
 		});
-
-
 	});
 }
 CRUD[CRUD_OPERATIONS.CREATE] = _insertDocument;
 
-function _updateDocument(collection, data, filter) {
+function _writeStoredProcedure(collection, data, filter) {
+	return new Promise(function (resolve, reject) {
+		var connection = mysql.createConnection(config.mysql),
+			sqlFormat = "call %s(%s)",
+			sql,
+			qstuff = [];
 
+		if(data) {
+			sql = util.format(sqlFormat, collection, "?");
+			qstuff.push(JSON.stringify(data));
+		} else {
+			sql = util.format(sqlFormat, collection, "");
+		}
+
+		connection.connect();
+
+		connection.query(sql, qstuff, function (error, results, fields) {
+			connection.end();
+
+			if (error) {
+				reject(error);
+			} else {
+				resolve(results);
+			}
+		});
+	});
+}
+CRUD[CRUD_OPERATIONS.WRITESP] = _writeStoredProcedure;
+
+function _updateDocument(collection, data, filter) {
 	return new Promise(function (resolve, reject) {
 		var connection = mysql.createConnection(config.mysql),
 			key = Object.keys(filter)[0],
@@ -359,10 +383,12 @@ function beginTransaction(schema, type, data, filter) {
 				tmp = filter.odata;
 			}
 			break;
-		// case CRUD_OPERATIONS.READSP:
-		// 	tmp.query = filter || {};
-		// 	tmp.paramNames = schema.sp.GET.params || {};
-		// 	break;
+		case CRUD_OPERATIONS.READSP:
+			tmp.query = filter || {};
+			tmp.paramNames = schema.sp.GET.params || {};
+			break;
+		case CRUD_OPERATIONS.WRITESP:
+			break;
 		default:
 			switch(resolvedFilter.type) {
 				case "odata":
