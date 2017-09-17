@@ -1,22 +1,46 @@
 {
-	"route": {
+	"routeParam": {
+		"activeUri": {
+			"method": "GET",
+			"type": "sp",
+			"name": "sp_test_read",
+			"uri": "/app/test/:id",
+			"returnOne": true
+		},
 		"storageType": "mysql",
 		"odataParser": "odata-v4-mysql",
-		"uri": "/app/testsp",
-		"entityName": "sp_test_read",
+		"entityName": "test_table",
 		"primaryKey": "id",
 		"nsPrefix": "app",
 		"entityType": "sp",
 		"useQueryParams": false,
-		"sp": {
-			"GET": {
-				"type": "sp",
-				"name": "sp_test_read",
-				"params": ["datum"]
-			}
-		}
+		"uri": [{
+			"method": "GET",
+			"type": "sp",
+			"name": "sp_test_read",
+			"uri": "/app/test/:id",
+			"returnOne": true
+		}]
 	},
-	"data": {
-		"datum": "Test Record"
+	"routeQuery": {
+		"activeUri": {
+			"method": "GET",
+			"type": "sp",
+			"name": "sp_test_read",
+			"uri": "/app/test"
+		},
+		"storageType": "mysql",
+		"odataParser": "odata-v4-mysql",
+		"entityName": "test_table",
+		"primaryKey": "id",
+		"nsPrefix": "app",
+		"entityType": "sp",
+		"useQueryParams": false,
+		"uri": [{
+			"method": "GET",
+			"type": "sp",
+			"name": "sp_test_read",
+			"uri": "/app/test"
+		}]
 	}
 }

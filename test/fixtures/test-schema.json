@@ -21,12 +21,5 @@
 			"nullable": true
 		}
 	},
-	"foreignKeys": {},
-	"ops": {
-		"GET": {
-			"type": "sp",
-			"name": "sp_companies_within_range",
-			"params": ["latIn", "lngIn", "withinRange", "preferred"]
-		}
-	}
+	"foreignKeys": {}
 }

@@ -150,7 +150,7 @@ function _readDocument(collection, data, filter) {
 CRUD[CRUD_OPERATIONS.READ] = _readDocument;
 
 function _readStoredProcedure(collection, data, tmp) {
-	console.log(tmp);
+	//console.log(data, tmp);
 	return new Promise(function (resolve, reject) {
 		var connection = mysql.createConnection(config.mysql),
 			sqlFormat = "call %s('%s')",
@@ -172,37 +172,32 @@ function _readStoredProcedure(collection, data, tmp) {
 		// 	sql = util.format(sqlFormat, collection, paramString);
 		//
 		// } else {
+		if(tmp && tmp.query) {
+			for(var i=0; i < tmp.query.parameters.length; i+=2) {
+				var n = tmp.query.parameters[i],
+					v = tmp.query.parameters[i+1];
 
-		for(var i=0; i < tmp.query.parameters.length; i+=2) {
-			var n = tmp.query.parameters[i],
-				v = tmp.query.parameters[i+1];
-
-			params[n] = v;
+				params[n] = v && typeof(v) === "string" ? v.replace(/'/gi, "") : v;
+			}
 		}
+
+		if(data) {
+			params = Object.assign(params, data);
+		}
+
 		sql = util.format(sqlFormat, collection, JSON.stringify(params));
+
 		//}
 
 		connection.connect();
 
 		connection.query(sql, qstuff, function (error, results, fields) {
 			connection.end();
-
+			//console.log(results);
 			if (error) {
 				reject(error);
 			} else {
-				// if (filter.getTotal) {
-				// 	var retval = {
-				// 		value: results
-				// 	};
-				// 	return _countDocuments(collection, data, queryParams)
-				// 		.then(function (total) {
-				// 			retval["odata.metadata"] = true;
-				// 			retval["odata.count"] = total;
-				// 			resolve(retval);
-				// 		});
-				// } else {
-					resolve(results.length > 0 ? results[0] : []);
-				// }
+				resolve(results.length > 0 ? results[0] : []);
 			}
 		});
 	});
@@ -210,6 +205,7 @@ function _readStoredProcedure(collection, data, tmp) {
 CRUD[CRUD_OPERATIONS.EXECSP] = _readStoredProcedure;
 
 function _insertDocument(collection, data, filter) {
+
 	return new Promise(function (resolve, reject) {
 		var connection = mysql.createConnection(config.mysql);
 
@@ -267,8 +263,8 @@ function _updateDocument(collection, data, filter) {
 	return new Promise(function (resolve, reject) {
 		var connection = mysql.createConnection(config.mysql),
 			key = Object.keys(filter)[0],
-			val = filter[key]
-		qstuff = [collection, data, key, val];
+			val = filter[key],
+			qstuff = [collection, data, key, val];
 
 		connection.connect(function (err, r2) {
 
@@ -281,6 +277,7 @@ function _updateDocument(collection, data, filter) {
 					if (error) {
 						reject(error);
 					} else {
+
 						resolve(results);
 					}
 
@@ -339,7 +336,6 @@ function _resolveFilter(req) {
 	if(!req) {
 		return {type: "none", filter: null};
 	} else if(__hasODATA(req)) {
-		console.log(req.odata);
 		return {type: "odata", filter: req.odata};
 	} else if(__hasQueryString(req)){
 		return {type: "queryString", filter: req.query};
@@ -383,49 +379,26 @@ function beginTransaction(schema, type, data, filter) {
 				tmp = filter.odata;
 			}
 			break;
-		case CRUD_OPERATIONS.READSP:
-			tmp.query = filter || {};
-			tmp.paramNames = schema.sp.GET.params || {};
-			break;
-		case CRUD_OPERATIONS.WRITESP:
+
+
+		case CRUD_OPERATIONS.UPDATE:
+			resolvedFilter.filter = {};
+			resolvedFilter.filter[schema.primaryKey] = data[schema.primaryKey];
+			tmp = resolvedFilter.filter;
 			break;
 		default:
 			switch(resolvedFilter.type) {
 				case "odata":
 					tmp = Object.assign(resolvedFilter.filter);
-					//if(tmp && !tmp.select) tmp.select = "*";
-					console.log(tmp, resolvedFilter);
 					break;
 				case "routeParams":
 				case "queryString":
 					tmp = _makeQueryPayload(resolvedFilter.filter);
 					break;
 				default:
-					// if(resolvedFilter) {
-					// 	tmp = resolvedFilter.filter;
-					// }
 					break;
 			}
 
-
-
-			// if (typeof (filter) === "object") {
-			// 	tmp = filter;
-			// } else {
-			// 	if (filter) {
-			// 		tmp.query = {
-			// 			parameters: []
-			// 		};
-			// 		tmp.query.where = "`" + schema.primaryKey + "` = ?";
-			// 		tmp.query.parameters.push(Number.isNaN(Number(filter)) ? filter : Number(filter));
-			//
-			// 	} else {
-			// 		if(data) {
-			// 			tmp = {};
-			// 			tmp[schema.primaryKey] = data[schema.primaryKey];
-			// 		}
-			// 	}
-			// }
 	};
 
 	if(schema.activeUri && schema.activeUri.type === "sp") {
@@ -434,7 +407,6 @@ function beginTransaction(schema, type, data, filter) {
 		entityName = schema.entityName;
 	}
 
-console.log(type);
 	return CRUD[type](entityName, data, tmp)
 		.then(function (results) {
 			return results;

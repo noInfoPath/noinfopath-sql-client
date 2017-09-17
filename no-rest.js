@@ -251,9 +251,7 @@ function _resolveBodyData(req) {
 		var b = typeof (req.body) === "string" ? JSON.parse(req.body) : req.body;
 
 		if (b._id) {
-			//console.log("HERE");
 			delete b._id;
-			//console.log("b", b);
 		}
 
 		req.body = b;
@@ -275,7 +273,7 @@ function _getOne(crud, schema, req) {
 }
 
 function _putByPrimaryKey(crud, schema, req) {
-	//console.log("_putByPrimaryKey", crud.type, "isBucketStorage", _isBucketStorage(schema.storageType));
+
 	var filter = {},
 		data = _scrubDatum(schema, _resolveBodyData(req).body),
 		routeID = (req.params && req.params.id) || data[schema.primaryKey];
@@ -336,38 +334,27 @@ function _read(crud, schema, filter) {
 		});
 }
 
-function _execSP(crud, schema, payload) {
-	return crud.execute(schema, crud.operations.EXECSP, null, payload)
+function _readSP(crud, schema, payload, filter) {
+	return crud.execute(schema, crud.operations.EXECSP, payload, filter)
 		.then(function(results){
 			results = results.map(function(datum){
 				return _transformDatum(schema, datum);
 			});
 
-			if(schema.activeUri.returnOne) {
+			if(schema.activeUri && schema.activeUri.returnOne) {
 				return results[0]; //Always returns the first result item or undefined.
 			} else {
 				return results;
 			}
-			// if(results.value) {
-			// 	results.value = results.value.map(function(datum){
-			// 		return _transformDatum(schema, datum);
-			// 	});
-			// } else {
-			// 	if(Array.isArray(results)) {
-			//
-			// 	} else {
-			// 		return results;
-			// 	}
-			// }
 
 			return results;
 		});
 }
 
-function _writeSP(crud, schema, data, filter) {
-	return crud.execute(schema, crud.operations.WRITESP, data, filter)
+function _writeSP(crud, schema, payload, filter) {
+	return _readSP(crud, schema, payload, filter)
 		.then(function(results){
-			return results;
+			return results.length > 0 ? results[0]: results;
 		});
 }
 
@@ -379,13 +366,8 @@ function _one(crud, schema, filter) {
 }
 
 function _update(crud, schema, data, filter) {
-	var pk = data[schema.primaryKey];
-
-	delete data[schema.primaryKey];
-
 	return crud.execute(schema, crud.operations.UPDATE, data, filter)
 		.then(function(result){
-			data[schema.primaryKey] = pk;
 			return _transformDatum(schema, data);
 		});
 }
@@ -397,7 +379,7 @@ function _destroy(crud, schema, filter) {
 function _wrapSchema(crud, schema) {
 	return {
 		read: _read.bind(null, crud, schema),
-		execSP: _execSP.bind(null, crud, schema),
+		readSP: _readSP.bind(null, crud, schema),
 		one: _one.bind(null, crud, schema),
 		update: _update.bind(null, crud, schema),
 		create: _create.bind(null, crud, schema),
@@ -426,11 +408,11 @@ module.exports = function(crudType, sqlConnInfo) {
 
 		//CRUD Exports
 		read: _read.bind(null, crud),
-		execSP: _execSP.bind(null, crud),
+		readSP: _readSP.bind(null, crud),
+		writeSP: _writeSP.bind(null, crud),
 		one: _one.bind(null, crud),
 		update: _update.bind(null, crud),
 		create: _create.bind(null, crud),
-		writeSP: _writeSP.bind(null, crud),
 		destroy: _destroy.bind(null, crud),
 
 		//Testing interface
