@@ -342,7 +342,16 @@ function _resolveFilter(req) {
 	} else if(__hasRouteParams(req)) {
 		return {type: "routeParams", filter: req.params};
 	} else {
-		return req;
+		if(__isReqObject(req)){
+			return req;
+		} else {
+			if(typeof(req) === "object") {
+				return {type: "plainObject", filter: req};
+			} else {
+				return {type: "routeParams", filter: {"id": req}};
+			}
+		}
+
 	}
 
 }
@@ -393,6 +402,7 @@ function beginTransaction(schema, type, data, filter) {
 					break;
 				case "routeParams":
 				case "queryString":
+				case "plainObject":
 					tmp = _makeQueryPayload(resolvedFilter.filter);
 					break;
 				default:
