@@ -53,7 +53,6 @@ describe("Testing noinfopath-sql-client E2E", function () {
 			testData.data = "CRUD Direct Test Update " + (new Date()).toLocaleString();
 			crud.execute(testSchema, crud.operations.UPDATE, testData)
 				.then(function (r) {
-
 					assert(r.affectedRows > 0);
 					done();
 				})
@@ -84,7 +83,6 @@ describe("Testing noinfopath-sql-client E2E", function () {
 				})
 				.then(function (r) {
 					assert(r.length === 1);
-					console.log(r);
 					done();
 				})
 				.catch(function (e) {
@@ -101,6 +99,19 @@ describe("Testing noinfopath-sql-client E2E", function () {
 					}
 				})
 				.then(function (r) {
+					assert(r.length === 1);
+					done();
+				})
+				.catch(function (e) {
+					console.error(e);
+					done(e);
+				});
+		});
+
+		it("should read one existing record using plain javascript object", function (done) {
+			crud.execute(testSchema, crud.operations.READ, null, {id: _newId})
+				.then(function (r) {
+					console.log(r);
 					assert(r.length === 1);
 					done();
 				})
@@ -340,9 +351,9 @@ describe("Testing noinfopath-sql-client E2E", function () {
 		});
 
 		it("should read all existing record", function (done) {
-			var req = {};
+			//var req = {};
 
-			sqlClient.get(testSchema, req)
+			sqlClient.get(testSchema)
 				.then(function (r) {
 					assert(r.length > 0);
 					done();
@@ -355,6 +366,7 @@ describe("Testing noinfopath-sql-client E2E", function () {
 
 		it("should read the last record written", function (done) {
 			var req = {
+				url: "/",
 				params: {
 					id: testData.id
 				}
