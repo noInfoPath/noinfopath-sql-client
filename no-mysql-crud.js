@@ -391,9 +391,12 @@ function beginTransaction(schema, type, data, filter) {
 
 
 		case CRUD_OPERATIONS.UPDATE:
-			resolvedFilter.filter = {};
-			resolvedFilter.filter[schema.primaryKey] = data[schema.primaryKey];
+			if(resolvedFilter.type !== "plainObject") {
+				resolvedFilter.filter = {};
+				resolvedFilter.filter[schema.primaryKey] = data[schema.primaryKey];
+			} 
 			tmp = resolvedFilter.filter;
+
 			break;
 		default:
 			switch(resolvedFilter.type) {
