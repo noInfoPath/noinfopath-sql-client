@@ -285,10 +285,10 @@ function _putByPrimaryKey(crud, schema, req) {
 }
 
 function _post(crud, schema, req) {
-	var data = req.body;
+	var data = schema.storageType === "gcs" ? req : req.body;
 	return _create(crud, schema, data)
 		.then(function(result){
-			return req.mydata ? result : data;  //??? what does mydata do?
+			return Object.keys(req.mydata).length > 0 ? req.mydata : data;  //??? what does mydata do?
 		});
 }
 
@@ -302,13 +302,19 @@ function _create(crud, schema, data) {
 
 	if (data[schema.primaryKey]) delete data[schema.primaryKey];
 
-	data = _scrubDatum(schema, data);
+	if(schema.storageType !== "gcs")  {
+		data = _scrubDatum(schema, data);
+	}
 
 	return crud.execute(schema, crud.operations.CREATE, data)
 		.then(function(result){
 			data[schema.primaryKey] = result.insertId;
-			var  r = _transformDatum(schema, data);
-			return  r;
+			if(schema.storageType !== "gcs")  {
+				var  r = _transformDatum(schema, data);
+				return  r;
+			} else {
+				return data;
+			}
 		});
 }
 
@@ -394,7 +400,19 @@ function _wrapSchema(crud, schema) {
 }
 
 module.exports = function(crudType, sqlConnInfo) {
-	var crud = require(crudInterfaces[crudType])(sqlConnInfo);
+
+	var crud;
+
+	console.log("crudType", typeof(crudType));
+
+
+	if(typeof(crudType) === "string") {
+		crud = require(crudInterfaces[crudType])(sqlConnInfo);
+	} else if(typeof(crudType) === "object"){
+		crud = crudType
+	} else {
+		throw new Error("Unsupported crudType");
+	}
 
 	if(!crud) throw new Error(util.format("Invalid CRUD provider, %s.", crudType));
 
