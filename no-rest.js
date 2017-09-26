@@ -123,20 +123,20 @@ var util = require("util"),
 			return n ? n : null;
 		},
 		"datetime": function (n) {
-			if(typeof(n) === "string") {
-				n =  n.replace(/ /gi, "T");
-				n =  n.indexOf("Z") === -1 ? n + "Z" : n;
+			if (typeof (n) === "string") {
+				n = n.replace(/ /gi, "T");
+				n = n.indexOf("Z") === -1 ? n + "Z" : n;
 			}
 
-			return n ? n  : null;
+			return n ? n : null;
 		},
 		"datetime2": function (n) {
-			if(typeof(n) === "string") {
-				n =  n.replace(/ /gi, "T");
-				n =  n.indexOf("Z") === -1 ? n + "Z" : n;
+			if (typeof (n) === "string") {
+				n = n.replace(/ /gi, "T");
+				n = n.indexOf("Z") === -1 ? n + "Z" : n;
 			}
 
-			return n ? n  : null;
+			return n ? n : null;
 		},
 		"datetimeoffset": function (n) {
 			return n ? n : null;
@@ -198,11 +198,11 @@ function _scrubDatum(schema, datum) {
 				col = schema.columns[p],
 				cfn;
 
-			if(!col) throw new Error(util.format("%s is not a column in the data table.  Check  your spelling and try again.", p));
+			if (!col) throw new Error(util.format("%s is not a column in the data table.  Check  your spelling and try again.", p));
 
 			cfn = conversionFunctionsIn[col.type];
 
-			if(cfn) {
+			if (cfn) {
 				prop = _nullable(schema.primaryKey, col, cfn(prop));
 			} else {
 				prop = _nullable(schema.primaryKey, col, prop);
@@ -219,7 +219,7 @@ function _scrubDatum(schema, datum) {
 }
 
 function _transformDatum(schema, datum) {
-	if(!schema.columns) return datum;
+	if (!schema.columns) return datum;
 
 	for (var p in datum) {
 		try {
@@ -227,11 +227,11 @@ function _transformDatum(schema, datum) {
 				col = schema.columns[p],
 				cfn;
 
-			if(!col) throw new Error(util.format("%s is not a column in the data table.  Check  your spelling and try again.", p));
+			if (!col) throw new Error(util.format("%s is not a column in the data table.  Check  your spelling and try again.", p));
 
 			cfn = conversionFunctionsOut[col.type];
 
-			if(cfn) {
+			if (cfn) {
 				prop = _nullable(schema.primaryKey, col, cfn(prop));
 			} else {
 				prop = _nullable(schema.primaryKey, col, prop);
@@ -269,7 +269,7 @@ function _get(crud, schema, req) {
 }
 
 function _getOne(crud, schema, req) {
-	return _one(crud, schema,  req); //TODO: make this support ODATA filter also.
+	return _one(crud, schema, req); //TODO: make this support ODATA filter also.
 }
 
 function _putByPrimaryKey(crud, schema, req) {
@@ -287,48 +287,49 @@ function _putByPrimaryKey(crud, schema, req) {
 function _post(crud, schema, req) {
 	var data = schema.storageType === "gcs" ? req : req.body;
 	return _create(crud, schema, data)
-		.then(function(result){
-			return Object.keys(req.mydata).length > 0 ? req.mydata : data;  //??? what does mydata do?
+		.then(function (result) {
+			return result || data; //??? what does mydata do?
 		});
 }
 
 function _delete(crud, schema, req) {
-	return _destroy(crud, schema, req);  //TODO: need to resolve filter from req here.
+	return _destroy(crud, schema, req); //TODO: need to resolve filter from req here.
 }
 
 //CRUD Aliases
 function _create(crud, schema, data) {
-	if (data._id) delete data._id;  //This is a mongodb thing.
+	if (data._id) delete data._id; //This is a mongodb thing.
 
 	if (data[schema.primaryKey]) delete data[schema.primaryKey];
 
-	if(schema.storageType !== "gcs")  {
+	if (schema.storageType !== "gcs") {
 		data = _scrubDatum(schema, data);
 	}
 
 	return crud.execute(schema, crud.operations.CREATE, data)
-		.then(function(result){
-			data[schema.primaryKey] = result.insertId;
-			if(schema.storageType !== "gcs")  {
-				var  r = _transformDatum(schema, data);
-				return  r;
+		.then(function (result) {
+			if (schema.storageType === "gcs") {
+				return result;
 			} else {
-				return data;
+				data[schema.primaryKey] = result.insertId;
+
+				var r = _transformDatum(schema, data);
+				return r;
 			}
 		});
 }
 
 function _read(crud, schema, filter) {
 	return crud.execute(schema, crud.operations.READ, null, filter)
-		.then(function(results){
+		.then(function (results) {
 
-			if(results.value) {
-				results.value = results.value.map(function(datum){
+			if (results.value) {
+				results.value = results.value.map(function (datum) {
 					return _transformDatum(schema, datum);
 				});
 			} else {
-				if(Array.isArray(results)) {
-					results = results.map(function(datum){
+				if (Array.isArray(results)) {
+					results = results.map(function (datum) {
 						return _transformDatum(schema, datum);
 					});
 				} else {
@@ -342,12 +343,12 @@ function _read(crud, schema, filter) {
 
 function _readSP(crud, schema, payload, filter) {
 	return crud.execute(schema, crud.operations.EXECSP, payload, filter)
-		.then(function(results){
-			results = results.map(function(datum){
+		.then(function (results) {
+			results = results.map(function (datum) {
 				return _transformDatum(schema, datum);
 			});
 
-			if(schema.activeUri && schema.activeUri.returnOne) {
+			if (schema.activeUri && schema.activeUri.returnOne) {
 				return results[0]; //Always returns the first result item or undefined.
 			} else {
 				return results;
@@ -359,8 +360,8 @@ function _readSP(crud, schema, payload, filter) {
 
 function _writeSP(crud, schema, payload, filter) {
 	return _readSP(crud, schema, payload, filter)
-		.then(function(results){
-			return results.length > 0 ? results[0]: results;
+		.then(function (results) {
+			return results.length > 0 ? results[0] : results;
 		});
 }
 
@@ -373,7 +374,7 @@ function _one(crud, schema, filter) {
 
 function _update(crud, schema, data, filter) {
 	return crud.execute(schema, crud.operations.UPDATE, data, filter)
-		.then(function(result){
+		.then(function (result) {
 			return _transformDatum(schema, data);
 		});
 }
@@ -399,22 +400,22 @@ function _wrapSchema(crud, schema) {
 	};
 }
 
-module.exports = function(crudType, sqlConnInfo) {
+module.exports = function (crudType, sqlConnInfo) {
 
 	var crud;
 
-	console.log("crudType", typeof(crudType));
+	console.log("crudType", typeof (crudType));
 
 
-	if(typeof(crudType) === "string") {
+	if (typeof (crudType) === "string") {
 		crud = require(crudInterfaces[crudType])(sqlConnInfo);
-	} else if(typeof(crudType) === "object"){
+	} else if (typeof (crudType) === "object") {
 		crud = crudType
 	} else {
 		throw new Error("Unsupported crudType");
 	}
 
-	if(!crud) throw new Error(util.format("Invalid CRUD provider, %s.", crudType));
+	if (!crud) throw new Error(util.format("Invalid CRUD provider, %s.", crudType));
 
 	return {
 		//HTTP Exports
