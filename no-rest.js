@@ -404,7 +404,7 @@ module.exports = function (crudType, sqlConnInfo) {
 
 	var crud;
 
-	console.log("crudType", typeof (crudType));
+	//console.log("crudType", typeof (crudType));
 
 
 	if (typeof (crudType) === "string") {
