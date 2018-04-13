@@ -44,8 +44,8 @@ var config = {
 		mysql: {}
 	},
 	util = require("util"),
-	mysql = require("mysql"),
-	mysqlp = require('promise-mysql'), //TODO: Convert to use promised mysql.
+	mysql = require("mysql2"),
+	//mysqlp = require('promise-mysql'), //TODO: Convert to use promised mysql.
 	CRUD = {},
 	CRUD_OPERATIONS = {
 		"CREATE": "create",
@@ -149,7 +149,7 @@ function _readDocument(collection, data, filter) {
 }
 CRUD[CRUD_OPERATIONS.READ] = _readDocument;
 
-function _readStoredProcedure(collection, data, tmp) {
+function _readStoredProcedure(collection, data, tmp, multi) {
 	//console.log(data, tmp);
 	return new Promise(function (resolve, reject) {
 		var connection = mysql.createConnection(config.mysql),
@@ -193,11 +193,11 @@ function _readStoredProcedure(collection, data, tmp) {
 
 		connection.query(sql, qstuff, function (error, results, fields) {
 			connection.end();
-			//console.log(results);
+			console.log(results);
 			if (error) {
 				reject(error);
 			} else {
-				resolve(results.length > 0 ? results[0] : []);
+				resolve(results.length > 0 ? (multi ? results : results[0]) : []);
 			}
 		});
 	});
@@ -376,7 +376,7 @@ function _makeQueryPayload(filter) {
 	return {query: q};
 }
 
-function beginTransaction(schema, type, data, filter) {
+function beginTransaction(schema, type, data, filter, multi) {
 	var resolvedFilter = _resolveFilter(filter),
 		tmp = {select: "*"}, entityName;
 
@@ -394,7 +394,7 @@ function beginTransaction(schema, type, data, filter) {
 			if(resolvedFilter.type !== "plainObject") {
 				resolvedFilter.filter = {};
 				resolvedFilter.filter[schema.primaryKey] = data[schema.primaryKey];
-			} 
+			}
 			tmp = resolvedFilter.filter;
 
 			break;
@@ -420,7 +420,7 @@ function beginTransaction(schema, type, data, filter) {
 		entityName = schema.entityName;
 	}
 
-	return CRUD[type](entityName, data, tmp)
+	return CRUD[type](entityName, data, tmp, multi)
 		.then(function (results) {
 			return results;
 		})
