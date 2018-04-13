@@ -1,6 +1,6 @@
 {
 	"name": "noinfopath-sql-client",
-	"version": "2.1.1",
+	"version": "2.1.2",
 	"description": "Provides a CRUD client for accessing mySQL and MS-SQL data sources.",
 	"main": "index.js",
 	"scripts": {
