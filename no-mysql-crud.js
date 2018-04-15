@@ -101,7 +101,7 @@ function _readDocument(collection, data, filter) {
 			qstuff = [filter.select || "*", collection];
 
 		//console.log("_readDocument", connection.state);
-		if(filter) {
+		if (filter) {
 			if (filter.query) {
 				//console.log(filter.query.parameters);
 				sql = sql + " WHERE " + filter.query.where.replace(/\$\d+/gi, "?");
@@ -150,38 +150,24 @@ function _readDocument(collection, data, filter) {
 CRUD[CRUD_OPERATIONS.READ] = _readDocument;
 
 function _readStoredProcedure(collection, data, tmp, multi) {
-	//console.log(data, tmp);
+
 	return new Promise(function (resolve, reject) {
 		var connection = mysql.createConnection(config.mysql),
 			sqlFormat = "call %s('%s')",
 			sql,
-			qstuff = [], params = {};
+			qstuff = [],
+			params = {};
 
-		// if (tmp.paramNames) {
-		// 	// sql = sql + "("; // open
-		// 	// this was a forEach but I needed a good way to not have the trailing comma
-		// 	var paramString = tmp.paramNames.map(function(param){
-		// 		return "?";
-		// 	}).join(",");
-		//
-		// 	var paramValues = tmp.paramNames.map(function(param){
-		// 		return tmp.query[param];
-		// 	});
-		//
-		// 	qstuff = qstuff.concat(paramValues);
-		// 	sql = util.format(sqlFormat, collection, paramString);
-		//
-		// } else {
-		if(tmp && tmp.query) {
-			for(var i=0; i < tmp.query.parameters.length; i+=2) {
+		if (tmp && tmp.query) {
+			for (var i = 0; i < tmp.query.parameters.length; i += 2) {
 				var n = tmp.query.parameters[i],
-					v = tmp.query.parameters[i+1];
+					v = tmp.query.parameters[i + 1];
 
-				params[n] = v && typeof(v) === "string" ? v.replace(/'/gi, "") : v;
+				params[n] = v && typeof (v) === "string" ? v.replace(/'/gi, "") : v;
 			}
 		}
 
-		if(data) {
+		if (data) {
 			params = Object.assign(params, data);
 		}
 
@@ -193,11 +179,48 @@ function _readStoredProcedure(collection, data, tmp, multi) {
 
 		connection.query(sql, qstuff, function (error, results, fields) {
 			connection.end();
-			console.log(results);
+
 			if (error) {
 				reject(error);
 			} else {
-				resolve(results.length > 0 ? (multi ? results : results[0]) : []);
+				var resultsets;
+
+				if (multi) {
+					if (typeof multi === "object") {
+						//Comtains instructions as to how to format the result.
+						/**
+						 * {
+						 *		"foo": {"index": 0, "one": true},
+						 *		"bar": {"index": 1, "one": false}
+						 * }
+						 *
+						 *	Converts to:
+						 *
+						 *	{
+						 * 		"foo": [{}],
+						 *		"bar": [{}]
+						 * 	}
+						 */
+
+						resultsets = {};
+
+						Object.keys(multi).forEach(function (k) {
+							var i = multi[k];
+							if (i.one) {
+								resultsets[k] = results[i.index][0] || {};
+							} else {
+								resultsets[k] = results[i.index] || [];
+							}
+						});
+
+					} else {
+						//Otherwise just return the resultsets; but drop the result object
+						resultsets = results.slice(0, -1);
+					}
+				} else {
+					resultsets = results.length > 0 ? results[0] : [];
+				}
+				resolve(resultsets); //legacy way; return first result set
 			}
 		});
 	});
@@ -237,7 +260,7 @@ function _writeStoredProcedure(collection, data, filter) {
 			sql,
 			qstuff = [];
 
-		if(data) {
+		if (data) {
 			sql = util.format(sqlFormat, collection, "?");
 			qstuff.push(JSON.stringify(data));
 		} else {
@@ -325,30 +348,61 @@ function _deleteDocument(collection, data, filter) {
 CRUD[CRUD_OPERATIONS.DELETE] = _deleteDocument;
 
 /*
-*	_resolveFilter
-*/
+ *	_resolveFilter
+ */
 function _resolveFilter(req) {
-	function __isReqObject(req) { return !!req.url; }
-	function __hasQueryString(req) { return __isReqObject(req) && (Object.keys(req.query || {}).length > 0); }
-	function __hasRouteParams(req) { return __isReqObject(req) && (Object.keys(req.params || {}).length > 0); }
-	function __hasODATA(req) { return __isReqObject(req) && (Object.keys(req.odata || {}).length > 0); }
+	function __isReqObject(req) {
+		return !!req.url;
+	}
 
-	if(!req) {
-		return {type: "none", filter: null};
-	} else if(__hasODATA(req)) {
-		return {type: "odata", filter: req.odata};
-	} else if(__hasQueryString(req)){
-		return {type: "queryString", filter: req.query};
-	} else if(__hasRouteParams(req)) {
-		return {type: "routeParams", filter: req.params};
+	function __hasQueryString(req) {
+		return __isReqObject(req) && (Object.keys(req.query || {}).length > 0);
+	}
+
+	function __hasRouteParams(req) {
+		return __isReqObject(req) && (Object.keys(req.params || {}).length > 0);
+	}
+
+	function __hasODATA(req) {
+		return __isReqObject(req) && (Object.keys(req.odata || {}).length > 0);
+	}
+
+	if (!req) {
+		return {
+			type: "none",
+			filter: null
+		};
+	} else if (__hasODATA(req)) {
+		return {
+			type: "odata",
+			filter: req.odata
+		};
+	} else if (__hasQueryString(req)) {
+		return {
+			type: "queryString",
+			filter: req.query
+		};
+	} else if (__hasRouteParams(req)) {
+		return {
+			type: "routeParams",
+			filter: req.params
+		};
 	} else {
-		if(__isReqObject(req)){
+		if (__isReqObject(req)) {
 			return req;
 		} else {
-			if(typeof(req) === "object") {
-				return {type: "plainObject", filter: req};
+			if (typeof (req) === "object") {
+				return {
+					type: "plainObject",
+					filter: req
+				};
 			} else {
-				return {type: "routeParams", filter: {"id": req}};
+				return {
+					type: "routeParams",
+					filter: {
+						"id": req
+					}
+				};
 			}
 		}
 
@@ -362,9 +416,10 @@ function _makeQueryPayload(filter) {
 			"where": "",
 			"orderby": "",
 			"parameters": []
-		}, tWhere = [];
+		},
+		tWhere = [];
 
-	Object.keys(filter).forEach(function(k){
+	Object.keys(filter).forEach(function (k) {
 		tWhere.push("?? = ?");
 		q.parameters.push(k);
 		q.parameters.push(filter[k]);
@@ -373,48 +428,55 @@ function _makeQueryPayload(filter) {
 
 	q.where = tWhere.join(" and ");
 
-	return {query: q};
+	return {
+		query: q
+	};
 }
 
 function beginTransaction(schema, type, data, filter, multi) {
+	//console.log("XXXXXX schema: %o, type: %s, data: %o, filter: %o, multi: %o", schema, type, data, filter, multi);
+
 	var resolvedFilter = _resolveFilter(filter),
-		tmp = {select: "*"}, entityName;
+		tmp = {
+			select: "*"
+		},
+		entityName;
 
-	switch(type) {
-		case CRUD_OPERATIONS.DELETE:
-			if (filter.params && filter.params.id) {
-				tmp = [schema.entityName, schema.primaryKey, filter.params.id];
-			} else {
-				tmp = filter.odata;
-			}
+	switch (type) {
+	case CRUD_OPERATIONS.DELETE:
+		if (filter.params && filter.params.id) {
+			tmp = [schema.entityName, schema.primaryKey, filter.params.id];
+		} else {
+			tmp = filter.odata;
+		}
+		break;
+
+
+	case CRUD_OPERATIONS.UPDATE:
+		if (resolvedFilter.type !== "plainObject") {
+			resolvedFilter.filter = {};
+			resolvedFilter.filter[schema.primaryKey] = data[schema.primaryKey];
+		}
+		tmp = resolvedFilter.filter;
+
+		break;
+	default:
+		switch (resolvedFilter.type) {
+		case "odata":
+			tmp = Object.assign(resolvedFilter.filter);
 			break;
-
-
-		case CRUD_OPERATIONS.UPDATE:
-			if(resolvedFilter.type !== "plainObject") {
-				resolvedFilter.filter = {};
-				resolvedFilter.filter[schema.primaryKey] = data[schema.primaryKey];
-			}
-			tmp = resolvedFilter.filter;
-
+		case "routeParams":
+		case "queryString":
+		case "plainObject":
+			tmp = _makeQueryPayload(resolvedFilter.filter);
 			break;
 		default:
-			switch(resolvedFilter.type) {
-				case "odata":
-					tmp = Object.assign(resolvedFilter.filter);
-					break;
-				case "routeParams":
-				case "queryString":
-				case "plainObject":
-					tmp = _makeQueryPayload(resolvedFilter.filter);
-					break;
-				default:
-					break;
-			}
+			break;
+		}
 
 	};
 
-	if(schema.activeUri && schema.activeUri.type === "sp") {
+	if (schema.activeUri && schema.activeUri.type === "sp") {
 		entityName = schema.activeUri.name;
 	} else {
 		entityName = schema.entityName;

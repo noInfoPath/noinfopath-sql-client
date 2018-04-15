@@ -227,7 +227,7 @@ function _transformDatum(schema, datum) {
 				col = schema.columns[p],
 				cfn;
 
-			if (!col) throw new Error(util.format("%s is not a column in the data table.  Check  your spelling and try again.", p));
+			if (!col) throw new Error(util.format("%s is not a column in the data table %s.  Check  your spelling and try again.", p, schema.entityName));
 
 			cfn = conversionFunctionsOut[col.type];
 
@@ -341,20 +341,28 @@ function _read(crud, schema, filter) {
 		});
 }
 
-function _readSP(crud, schema, payload, filter) {
-	return crud.execute(schema, crud.operations.EXECSP, payload, filter)
+function _readSP(crud, schema, payload, filter, multi) {
+	return crud.execute(schema, crud.operations.EXECSP, payload, filter, multi)
 		.then(function (results) {
-			results = results.map(function (datum) {
-				return _transformDatum(schema, datum);
-			});
 
-			if (schema.activeUri && schema.activeUri.returnOne) {
-				return results[0]; //Always returns the first result item or undefined.
-			} else {
-				return results;
+			if (typeof results === "object") {
+				if (results.length) {
+					results = results.map(function (datum) {
+						return _transformDatum(schema, datum);
+					});
+
+					if (schema.activeUri && schema.activeUri.returnOne) {
+						return results[0]; //Always returns the first result item or undefined.
+					} else {
+						return results;
+					}
+				}
 			}
 
+
+
 			return results;
+
 		});
 }
 
@@ -437,7 +445,9 @@ module.exports = function (crudType, sqlConnInfo) {
 		//Testing interface
 		_crud: crud,
 
-		wrapSchema: _wrapSchema.bind(null, crud)
+		wrapSchema: _wrapSchema.bind(null, crud),
+
+		transformDatum: _transformDatum
 	};
 
 };
